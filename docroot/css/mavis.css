@@ -9,6 +9,16 @@ A:hover {text-decoration:underline; color:#a05705; }
 #mavisheadingdiv {}
 #mavisnamesdiv { position:absolute; left:0px; top:0px; padding:0px 10px; 
   background-image:url('../img/bleachscrub.png'); border-radius:10px; 
-  border:1px solid #999;}
-.mavispath {}
+  border:1px solid #999; font-size:medium; overflow:scroll; }
+#mavismapdiv {}
+#maviszrdiv { position:absolute; left:0px; top:0px; display:none;
+  background-image:url('../img/greenlens.png'); border:2px solid #0f0; 
+  font-size:small; }
+#maviszoomdiv { position:absolute; left:0px; top:0px; background:#fff;
+  border:1px solid #999; overflow:scroll; }
+#maviszxdiv { position:absolute; top:0px; left:0px; font-size:medium;
+  background:#fff; border-radius:10px; padding:0px 5px; margin-top:2px; }
+.mavispath { opacity:0.5; }
 .mavislabel { font-size:small; stroke:#999; }
+.mavisnamediv { display:inline-block; margin:1px 10px 1px 0px; 
+  padding:0px 2px; border-radius:5px; }
