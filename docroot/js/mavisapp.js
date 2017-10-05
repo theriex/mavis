@@ -17,23 +17,37 @@ mavisapp = (function () {
         stat = {zoomed:false, nuto:null};
     
 
-    function pathLabelPoint (path, xp, yp) {
-        var lp = {minx:10000, miny:10000, maxx:0, maxy:0}, 
-            idx = 0, commands = ["M", "L", "Z"];
+    function pathToPoints (path) {
+        var pts = [], commands = ["M", "L", "Z"], idx = 0;
         path = path.split(" ");
         while(idx < path.length) {
             if(commands.indexOf(path[idx]) >= 0) {
                 idx += 1; }
             else {
-                lp.cx = +path[idx];
-                lp.cy = +path[idx + 1];
-                lp.minx = Math.min(lp.minx, lp.cx);
-                lp.miny = Math.min(lp.miny, lp.cy);
-                lp.maxx = Math.max(lp.maxx, lp.cx);
-                lp.maxy = Math.max(lp.maxy, lp.cy);
+                pts.push({x:+path[idx], y:+path[idx + 1]});
                 idx += 2; } }
-        lp.x = lp.minx + (xp * (lp.maxx - lp.minx));
-        lp.y = lp.miny + (yp * (lp.maxy - lp.miny));
+        return pts;
+    }
+
+
+    function boundingRectForPoints(pts) {
+        var rect = {minx:10000, miny:10000, maxx:0, maxy:0};
+        pts.forEach(function (pt) {
+            rect.minx = Math.min(rect.minx, pt.x);
+            rect.miny = Math.min(rect.miny, pt.y);
+            rect.maxx = Math.max(rect.maxx, pt.x);
+            rect.maxy = Math.max(rect.maxy, pt.y); });
+        return rect;
+    }
+
+
+    function pathLabelPoint (dp, xp, yp) {
+        var br, lp;
+        dp.ppts = dp.ppts || pathToPoints(dp.path);
+        dp.boundr = dp.boundr || boundingRectForPoints(dp.ppts); 
+        br = dp.boundr;
+        lp = {x:br.minx + (xp * (br.maxx - br.minx)),
+              y:br.miny + (yp * (br.maxy - br.miny))};
         return lp;
     }
 
@@ -69,7 +83,7 @@ mavisapp = (function () {
                           onmouseout:jt.fs("mavisapp.hover()"),
                           d:dp.path}]); });
         dat.forEach(function (dp) {
-            var lp = pathLabelPoint(dp.path, 0.3, 0.46);
+            var lp = pathLabelPoint(dp, 0.3, 0.46);
             html.push(
                 ["text", {id:idp + dp.id + "label", cla:"mavislabel",
                           onmouseover:jt.fs("mavisapp.hover('" + dp.id + "')"),
@@ -78,16 +92,14 @@ mavisapp = (function () {
                  dp.district.split(" ")[0]]); });
         html = ["svg", {baseProfile:"tiny", width:size.w, height:size.h,
                         viewBox:"0 0 800 492", "stroke-linecap":"round", 
-                        "stroke-linejoin":"round", id:"mavissvg"},
-                ["g", {id:"mavisg"}, html]];
+                        "stroke-linejoin":"round", id:idp + "mavissvg"},
+                ["g", {id:idp + "mavisg"}, html]];
         return jt.tac2html(html);
     }
 
 
     function pathInRect (dp, filt) {
         var inter, pad = 2;
-        if(!filt || !dp || !dp.boundr) {  //if filtering badly defined, skip it
-            return true; }
         //pad the filter all around to avoid including things where only the
         //edge is barely touching
         filt = {minx:filt.minx + pad,
@@ -107,13 +119,52 @@ mavisapp = (function () {
     }
 
 
+    function pointWithinPath (dp, point) {
+        var inside = false, prevp = dp.ppts[dp.ppts.length - 1];
+        if(dp.id === colors.currid) {
+            //if hovering over this point, then include it.
+            return true; }
+        //Check if point is outside the bounding rectangle for the path.
+        if(point.x < dp.boundr.minx || point.x > dp.boundr.maxx ||
+           point.y < dp.boundr.miny || point.y > dp.boundr.maxy) {
+            return false; }
+        //Check how many times a ray emanating to the right from the point
+        //would intersect the polygon.  An odd number of times means the
+        //point lies inside the polygon.
+        //https://www.codeproject.com/tips/84226/is-a-point-inside-a-polygon
+        dp.ppts.forEach(function (pt) {
+            var m, b, x;
+            if((prevp.y > point.y) !== (pt.y > point.y)) { //have y cross
+                //derive line equation (y = mx + b) and verify the ray
+                //intersects it to the right by plugging in point.y and
+                //comparing the result to point.x.
+                m = (pt.y - prevp.y) / (pt.x - prevp.x);
+                b = pt.y - (m * pt.x);
+                x = (point.y - b) / m;
+                if(point.x < x) {
+                    inside = !inside; } } });
+        return inside;
+    }
+
+
+    function filterTest (dp, filt) {
+        if(!filt || !dp || !dp.boundr) {  //if filter data missing, let it go.
+            return true; }
+        if(filt.minx) {
+            return pathInRect(dp, filt); }
+        if(filt.x) {
+            return pointWithinPath(dp, filt); }
+        return false;
+    }
+
+
     function namesFromDat (filt) {
         var html = [];
         dat.forEach(function (dp) {
             var fsty = "";
             if(dp.cs === "S") {
                 fsty = "font-style:italic;"; }
-            if(!filt || pathInRect(dp, filt)) {
+            if(!filt || filterTest(dp, filt)) {
                 html.push(
                     ["div", 
                      {id:dp.id + "name", cla:"mavisnamediv",
@@ -121,7 +172,7 @@ mavisapp = (function () {
                       onmouseover:jt.fs("mavisapp.hover('" + dp.id + "')"),
                       onmouseout:jt.fs("mavisapp.hover()")},
                      ["a", {href:dp.url,
-                            onclick:jt.fs("mavisapp.select('" + dp.id + "')")},
+                            onclick:jt.fs("mavisapp.namesel('" + dp.id + "')")},
                       dp.name.slice(0, -4)]]); } });
         return jt.tac2html(html);
     }
@@ -141,9 +192,9 @@ mavisapp = (function () {
                 divw:jt.byId("maviscontentdiv").offsetWidth,
                 h:window.innerHeight};
         dat.forEach(function (dp) {
-            dp.boundr = pathLabelPoint(dp.path, 1.0, 1.0);
-            dims.svgw = Math.max(dims.svgw, dp.boundr.x);
-            dims.svgh = Math.max(dims.svgh, dp.boundr.y); });
+            pathLabelPoint(dp, 1.0, 1.0);  //verify dp.boundr set
+            dims.svgw = Math.max(dims.svgw, dp.boundr.maxx);
+            dims.svgh = Math.max(dims.svgh, dp.boundr.maxy); });
         dims.mult = dims.divw / dims.svgw;
         dims.svbw = dims.svgw;
         dims.svbh = dims.svgh;
@@ -158,7 +209,7 @@ mavisapp = (function () {
         dims.zrw = dims.nmw;
         dims.zrh = dims.mab;
         //zoomed svg display (scrolling magnified svg)
-        dims.zf = 5;  //zoom factor
+        dims.zf = 8;  //zoom factor
         dims.zsw = Math.round(dims.svbw * dims.zf);
         dims.zsh = Math.round(dims.svbh * dims.zf);
         //zoom indicator rect (green box)
@@ -251,6 +302,22 @@ mavisapp = (function () {
     }
 
 
+    function zwclick (event) {
+        //Can't use SVGSVGElement.getIntersectionList() because there are
+        //overlapping paths so not all are pointer event targets.
+        var clickpt = {x:event.layerX / dims.zf,
+                       y:event.layerY / dims.zf};
+        // var circ = document.createElementNS("http://www.w3.org/2000/svg", 
+        //                                     "circle");
+        // circ.setAttribute("cx", clickpt.x);
+        // circ.setAttribute("cy", clickpt.y);
+        // circ.setAttribute("r", 2);
+        // circ.setAttribute("style", "stroke:#000;fill:#000;");
+        // jt.byId("zmavissvg").appendChild(circ);
+        jt.out("mavisnamesdiv", namesFromDat({x:clickpt.x, y:clickpt.y}));
+    }
+
+
     function init () {
         var zdiv, ndiv;
         jtminjsDecorateWithUtilities(jt);
@@ -273,6 +340,7 @@ mavisapp = (function () {
              "x"]));
         jt.byId("maviszxdiv").style.left = (dims.zrw - 10) + "px";
         jt.on("maviszoomdiv", "scroll", zwscroll);
+        jt.on("maviszoomdiv", "click", zwclick);
         //adjust the zoom indicator rect size
         zdiv = jt.byId("maviszrdiv");
         zdiv.style.width = dims.ziw + "px";
@@ -308,15 +376,15 @@ mavisapp = (function () {
     }
 
 
-    function select (dpid) {
-        jt.log("selected " + dpdict[dpid].name);
+    function namesel (dpid) {
+        jt.log("namesel " + dpdict[dpid].name);
     }
 
 
 return {
     init: function () { init(); },
     hover: function (dpid) { hover(dpid); },
-    select: function (dpid) { select(dpid); },
+    namesel: function (dpid) { namesel(dpid); },
     zoomdisp: function () { zoomdisp(); }
 };
 }());
