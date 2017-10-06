@@ -50,7 +50,7 @@ var datmerge = (function () {
                     jst += ", "; }
                 jst += key + ":" + val; });
             jst += "}"; });
-        jst += "];\n"
+        jst += "];\n";
         fs.writeFileSync("docroot/js/" + gvarn + ".js", jst, writeopt);
     }
 

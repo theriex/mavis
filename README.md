@@ -23,7 +23,6 @@ Merge the svg and data to form maviscon.js combined source:
 node datmerge.js rep.svg rep.json
 ```
 
-
 # Other data
 
 http://www.mass.gov/anf/research-and-tech/it-serv-and-support/application-serv/office-of-geographic-information-massgis/datalayers/cong113.html

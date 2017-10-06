@@ -61,6 +61,42 @@ mavisapp = (function () {
     }
 
 
+    function teamName (dp) {
+        var tn = "Unknown";
+        switch(dp.name.trim().slice(-3)) {
+        case "(D)": tn = "Democrat"; break;
+        case "(R)": tn = "Republican"; break; }
+        return tn;
+    }
+
+
+    function legisType (dp) {
+        var lt = "Unknown";
+        switch(dp.cs) {
+        case "H": lt = "Representative"; break;
+        case "S": lt = "Senator"; break; }
+        return lt;
+    }
+
+
+    function phoneLink (dp) {
+        var html = "";
+        if(dp.phone) {
+            html = jt.tac2html(["a", {href:"tel:" + dp.phone}, dp.phone]); }
+        return html;
+    }
+
+
+    function onlineContactLinks (dp) {
+        var html = [];
+        if(dp.email) {
+            html.push(["a", {href:"mailto:" + dp.email},
+                       ["img", {src:"img/emailbw22.png"}]]); }
+        html = jt.tac2html(html);
+        return html;
+    }
+
+
     function pathColor (dp) {
         return teamColor(dp).map;
     }
@@ -82,14 +118,16 @@ mavisapp = (function () {
                           onmouseover:jt.fs("mavisapp.hover('" + dp.id + "')"),
                           onmouseout:jt.fs("mavisapp.hover()"),
                           d:dp.path}]); });
-        dat.forEach(function (dp) {
-            var lp = pathLabelPoint(dp, 0.3, 0.46);
-            html.push(
-                ["text", {id:idp + dp.id + "label", cla:"mavislabel",
-                          onmouseover:jt.fs("mavisapp.hover('" + dp.id + "')"),
-                          onmouseout:jt.fs("mavisapp.hover()"),
-                          x:lp.x, y:lp.y},
-                 dp.district.split(" ")[0]]); });
+        //district labels seem like a good idea, but there is so little space
+        //in the svg polygons that the labels clutter everything up.
+        // dat.forEach(function (dp) {
+        //     var lp = pathLabelPoint(dp, 0.3, 0.46);
+        //     html.push(
+        //         ["text", {id:idp + dp.id + "label", cla:"mavislabel",
+        //                   onmouseover:jt.fs("mavisapp.hover('" + dp.id + "')"),
+        //                   onmouseout:jt.fs("mavisapp.hover()"),
+        //                   x:lp.x, y:lp.y},
+        //          dp.district.split(" ")[0]]); });
         html = ["svg", {baseProfile:"tiny", width:size.w, height:size.h,
                         viewBox:"0 0 800 492", "stroke-linecap":"round", 
                         "stroke-linejoin":"round", id:idp + "mavissvg"},
@@ -218,6 +256,9 @@ mavisapp = (function () {
         dims.ziw50 = Math.round(0.5 * dims.ziw);
         dims.zih50 = Math.round(0.5 * dims.zih);
         dims.zib = 2;  //border width for indicator rect
+        //profile display
+        dims.pdw = Math.round(0.95 * dims.svgw);
+        dims.pdh = Math.round(1.2 * dims.svgh);
     }
 
 
@@ -319,7 +360,7 @@ mavisapp = (function () {
 
 
     function init () {
-        var zdiv, ndiv;
+        var zdiv, ndiv, pdiv;
         jtminjsDecorateWithUtilities(jt);
         initData(mavissen.concat(mavisrep));
         initDims();
@@ -351,6 +392,11 @@ mavisapp = (function () {
         ndiv.style.height = dims.nmh + "px";
         ndiv.style.width = dims.nmw + "px";
         jt.out("mavisnamesdiv", namesFromDat());
+        //set the profdisp size and display
+        pdiv = jt.byId("mavisdetdiv");
+        pdiv.style.width = dims.pdw + "px";
+        pdiv.style.height = dims.pdh + "px";
+        pdiv.style.display = "none";
     }
 
 
@@ -376,8 +422,29 @@ mavisapp = (function () {
     }
 
 
+    //The legislator url does not permit cross-origin framing, so any data
+    //from there needs to be extracted first.
     function namesel (dpid) {
-        jt.log("namesel " + dpdict[dpid].name);
+        var html, dp = dpdict[dpid];
+        html = ["div", {id:"profdispdiv"},
+                [["div", {id:"profclosexdiv"},
+                  ["a", {href:"#close", onclick:jt.fs("mavisapp.closeprof()")},
+                   "x"]],
+                 ["div", {id:"profnamediv"},
+                  ["a", {href:dp.url, 
+                         onclick:jt.fs("window.open('" + dp.url + "')")},
+                   dp.name.slice(0, -4)]],
+                 ["div", {id:"profbodydiv"},
+                  [["div", {id:"profpicdiv"},
+                    ["img", {src:"img/profpic/" + dp.capic}]],
+                   ["div", {id:"profteamdiv"}, teamName(dp)],
+                   ["div", {id:"profposdiv"}, legisType(dp)],
+                   ["div", {id:"profdistdiv"}, dp.district || ""],
+                   ["div", {id:"profphonediv"}, phoneLink(dp)],
+                   ["div", {id:"profroomdiv"}, "Room " +(dp.room || "Unknown")],
+                   ["div", {id:"profolcont"}, onlineContactLinks(dp)]]]]];
+        jt.out("mavisdetdiv", jt.tac2html(html));
+        jt.byId("mavisdetdiv").style.display = "block";
     }
 
 
@@ -385,6 +452,7 @@ return {
     init: function () { init(); },
     hover: function (dpid) { hover(dpid); },
     namesel: function (dpid) { namesel(dpid); },
-    zoomdisp: function () { zoomdisp(); }
+    zoomdisp: function () { zoomdisp(); },
+    closeprof: function () { jt.byId("mavisdetdiv").style.display = "none"; }
 };
 }());

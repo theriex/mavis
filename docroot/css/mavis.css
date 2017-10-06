@@ -18,7 +18,21 @@ A:hover {text-decoration:underline; color:#a05705; }
   border:1px solid #999; overflow:scroll; }
 #maviszxdiv { position:absolute; top:0px; left:0px; font-size:medium;
   background:#fff; border-radius:10px; padding:0px 5px; margin-top:2px; }
+#mavisdetdiv { position:absolute; left:0px; top:0px; background:#fff;
+  border:1px solid #999; border-radius:10px; overflow:scroll; }
 .mavispath { opacity:0.5; }
 .mavislabel { font-size:small; stroke:#999; }
 .mavisnamediv { display:inline-block; margin:1px 10px 1px 0px; 
   padding:0px 2px; border-radius:5px; }
+
+#profclosexdiv { float:right; margin-right:10px; font-size:small; }
+#profnamediv { padding:10px; text-align:center; }
+#profbodydiv { padding-right:10px; }
+#profpicdiv { float:left; margin-right:10px; }
+#profpicdiv img { max-width:140px; }
+#profposdiv { font-size:medium; }
+#profteamdiv { font-size:small; }
+#profdistdiv { font-size:x-small; }
+#profphonediv { font-size:small; }
+#profroomdiv { font-size:small; }
+
