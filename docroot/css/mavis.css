@@ -6,10 +6,11 @@ A:hover {text-decoration:underline; color:#a05705; }
 #mavisouterdiv { font-size:large; 
   font-family: "Open Sans", "Verdana", "Arial", "Helvetica", sans-serif; }
 #maviscontentdiv { position:relative; }
-#mavisheadingdiv {}
-#mavisnamesdiv { position:absolute; left:0px; top:0px; padding:0px 10px; 
-  background-image:url('../img/bleachscrub.png'); border-radius:10px; 
-  border:1px solid #999; font-size:medium; overflow:scroll; }
+#mavisnamesdiv, #mavisheadingdiv { position:absolute; left:0px; top:0px; 
+  padding:0px 10px; background-image:url('../img/bleachscrub.png'); 
+  border-radius:10px; border:1px solid #999; font-size:medium; 
+  overflow:scroll; }
+#mavisheadingdiv { margin-top:-5px; }
 #mavismapdiv {}
 #maviszrdiv { position:absolute; left:0px; top:0px; display:none;
   background-image:url('../img/greenlens.png'); border:2px solid #0f0; 

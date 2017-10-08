@@ -14,7 +14,7 @@ mavisapp = (function () {
                   republican:{map:"#ff3333", txt:"#f4d0d0"}, 
                   democrat:{  map:"#3333ff", txt:"#dbdbff"}},
         dims = null,
-        stat = {zoomed:false, nuto:null, zwclickid:null, nmidx:0};
+        stat = {zoomed:false, nuto:null, fito:null, zwclickid:null, nmidx:0};
     
 
     function pathToPoints (path) {
@@ -205,6 +205,18 @@ mavisapp = (function () {
     }
 
 
+    function pointMatchesText (dp, txt) {
+        var lt = txt.toLowerCase();
+        if(dp.name.toLowerCase().indexOf(lt) >= 0) {
+            return true; }
+        if(teamName(dp).toLowerCase().indexOf(lt) >= 0) {
+            return true; }
+        if("progressive".indexOf(lt) >= 0 && dp.progcauc) {
+            return true; }
+        return false;
+    }
+
+
     function filterTest (dp, filt) {
         if(!filt || !dp || !dp.boundr) {  //if filter data missing, let it go.
             return true; }
@@ -212,6 +224,8 @@ mavisapp = (function () {
             return pathInRect(dp, filt); }
         if(filt.x) {
             return pointWithinPath(dp, filt); }
+        if(filt.txt) {
+            return pointMatchesText(dp, filt.txt); }
         return false;
     }
 
@@ -329,11 +343,20 @@ mavisapp = (function () {
 
 
     function mapmm (event) {
-        var zrdiv, cp = dims.zib + Math.round(0.5 * dims.pad);
+        var zrdiv, tdiv, cp = dims.zib + Math.round(0.5 * dims.pad);
         if(stat.zoomed || event.clientY > dims.svgh) {
-            return removeZoomIndicatorRect(); }
+            return; }  //don't react to mouse moves when zoom display open
         dims.zil = event.clientX - cp - dims.ziw50;
         dims.zit = event.clientY - cp - dims.zih50;
+        //If there is filter text, then don't interfere with filtering
+        if(jt.byId("txtfiltin").value) {
+            return; }
+        else {  //remove focus so resetting focus will clear ind rect
+            jt.byId("txtfiltin").blur(); }
+        tdiv = jt.byId("mavisheadingdiv");
+        if((dims.zil < (tdiv.offsetLeft + tdiv.offsetWidth)) && 
+           (dims.zit < (tdiv.offsetTop + tdiv.offsetHeight))) {
+            return; }
         zrdiv = jt.byId("maviszrdiv");
         zrdiv.style.display = "block";
         zrdiv.style.left = dims.zil + "px";
@@ -429,6 +452,8 @@ mavisapp = (function () {
         ndiv.style.top = dims.mab + "px";
         ndiv.style.height = dims.nmh + "px";
         ndiv.style.width = dims.nmw + "px";
+        ndiv = jt.byId("mavisheadingdiv");   //match search area width
+        ndiv.style.width = Math.min(200, dims.nmw) + "px";
         jt.out("mavisnamesdiv", namesFromDat());
     }
 
@@ -449,12 +474,17 @@ mavisapp = (function () {
     }
 
 
+    function clearZooming () {
+        removeZoomIndicatorRect();
+        zoomdisp(false);
+    }
+
+
     function escapeKeyHandler (event) {
         if(jt.byId("mavisdetdiv").style.display === "block") {
             return mavisapp.closeprof(); }
         if(jt.byId("maviszoomdiv").style.display === "block") {
-            removeZoomIndicatorRect();
-            return zoomdisp(false); }
+            return clearZooming(); }
     }
 
 
@@ -486,6 +516,28 @@ mavisapp = (function () {
     }
 
 
+    function filterDisplayData () {
+        if(stat.fito) {  //already waiting to update display
+            return; }
+        stat.fito = setTimeout(function () {
+            var val = jt.byId("txtfiltin").value;
+            jt.out("mavisnamesdiv", namesFromDat({txt:val}));
+            stat.fito = null; }, 100);
+    }
+
+
+    function initHeadingDisplay () {
+        var html = [
+            ["div", {id:"searchdiv"},
+             ["input", {id:"txtfiltin", type:"text",
+                        placeholder:"superfilter",
+                        onfocus:jt.fs("mavisapp.clearZooming()"),
+                        onkeyup:jt.fs("mavisapp.filter()"),
+                        style:"padding:0px;font-size:small;width:140px;"}]]];
+        jt.out("mavisheadingdiv", jt.tac2html(html));
+    }
+
+
     function init () {
         jtminjsDecorateWithUtilities(jt);
         initData(mavissen.concat(mavisrep));
@@ -494,7 +546,10 @@ mavisapp = (function () {
         initZoomedArea();
         initNamesArea();
         initProfileDisplayArea();
+        initHeadingDisplay();
         jt.on(document, "keydown", globkey);
+        setTimeout(function () {
+            jt.byId("txtfiltin").focus(); }, 1200);
     }
 
 
@@ -553,6 +608,8 @@ return {
     hover: function (dpid) { hover(dpid); },
     namesel: function (dpid) { namesel(dpid); },
     zoomdisp: function () { zoomdisp(); },
-    closeprof: function () { jt.byId("mavisdetdiv").style.display = "none"; }
+    closeprof: function () { jt.byId("mavisdetdiv").style.display = "none"; },
+    filter: function () { filterDisplayData(); },
+    clearZooming: function () { clearZooming(); }
 };
 }());
