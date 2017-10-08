@@ -14,7 +14,7 @@ mavisapp = (function () {
                   republican:{map:"#ff3333", txt:"#f4d0d0"}, 
                   democrat:{  map:"#3333ff", txt:"#dbdbff"}},
         dims = null,
-        stat = {zoomed:false, nuto:null, zwclickid:null};
+        stat = {zoomed:false, nuto:null, zwclickid:null, nmidx:0};
     
 
     function pathToPoints (path) {
@@ -218,6 +218,7 @@ mavisapp = (function () {
 
     function namesFromDat (filt) {
         var html = [];
+        stat.nmidx = -1;  //first downarrow press selects first name
         dat.forEach(function (dp) {
             var fsty = "";
             if(dp.cs === "S") {
@@ -321,10 +322,16 @@ mavisapp = (function () {
     // }
 
 
+    function removeZoomIndicatorRect () {
+        jt.byId("maviszrdiv").style.display = "none";
+        jt.out("mavisnamesdiv", namesFromDat());
+    }
+
+
     function mapmm (event) {
         var zrdiv, cp = dims.zib + Math.round(0.5 * dims.pad);
         if(stat.zoomed || event.clientY > dims.svgh) {
-            return; }
+            return removeZoomIndicatorRect(); }
         dims.zil = event.clientX - cp - dims.ziw50;
         dims.zit = event.clientY - cp - dims.zih50;
         zrdiv = jt.byId("maviszrdiv");
@@ -385,16 +392,17 @@ mavisapp = (function () {
     }
 
 
-    function init () {
-        var zdiv, ndiv, pdiv;
-        jtminjsDecorateWithUtilities(jt);
-        initData(mavissen.concat(mavisrep));
-        initDims();
+    function initMap () {
         jt.out("mavismapdiv", svgFromDat());
         jt.on("mavismapdiv", "mousemove", mapmm);
         jt.on("maviszrdiv", "mousemove", mapmm);
         jt.on("mavismapdiv", "click", clickzoom);
         jt.on("maviszrdiv", "click", clickzoom);
+    }
+
+
+    function initZoomedArea () {
+        var zdiv;
         //initialize the zoomed area display
         zdiv = jt.byId("maviszoomdiv");
         zdiv.style.left = "10px";  //pad to match name area
@@ -412,17 +420,81 @@ mavisapp = (function () {
         zdiv = jt.byId("maviszrdiv");
         zdiv.style.width = dims.ziw + "px";
         zdiv.style.height = dims.zih + "px";
-        //adjust the name listing area size and display
+    }
+
+
+    function initNamesArea () {
+        var ndiv;
         ndiv = jt.byId("mavisnamesdiv");
         ndiv.style.top = dims.mab + "px";
         ndiv.style.height = dims.nmh + "px";
         ndiv.style.width = dims.nmw + "px";
         jt.out("mavisnamesdiv", namesFromDat());
-        //set the profdisp size and display
+    }
+
+
+    function initProfileDisplayArea () {
+        var pdiv;
         pdiv = jt.byId("mavisdetdiv");
         pdiv.style.width = dims.pdw + "px";
         pdiv.style.height = dims.pdh + "px";
         pdiv.style.display = "none";
+    }
+
+
+    function keycode (event, code) {
+        if(event && (event.charCode === code || event.keyCode === code)) {
+            return true; }
+        return false;
+    }
+
+
+    function escapeKeyHandler (event) {
+        if(jt.byId("mavisdetdiv").style.display === "block") {
+            return mavisapp.closeprof(); }
+        if(jt.byId("maviszoomdiv").style.display === "block") {
+            removeZoomIndicatorRect();
+            return zoomdisp(false); }
+    }
+
+
+    function arrowNameSel (event, offset) {
+        var ndiv, i, nseldiv, dpid;
+        //by default the arrow keys scroll the zoomed display area.  Due
+        //to the zoom factor, that movement is clunky.  Better to just
+        //move the name selection.
+        jt.evtend(event);
+        stat.nmidx += offset;
+        stat.nmidx = Math.max(0, stat.nmidx);
+        ndiv = jt.byId("mavisnamesdiv");
+        stat.nmidx = Math.min(ndiv.children.length, stat.nmidx);
+        for(i = 0; i < ndiv.children.length; i += 1) {
+            if(i === stat.nmidx) {
+                nseldiv = ndiv.children[i];
+                dpid = nseldiv.id.slice(0, -4);
+                mavisapp.hover(dpid);
+                return mavisapp.namesel(dpid); } }
+    }
+
+
+    function globkey (e) {
+        if(keycode(e, 27)) { escapeKeyHandler(e); }
+        else if(keycode(e, 37)) { arrowNameSel(e, -1); }  //Left
+        else if(keycode(e, 38)) { arrowNameSel(e, -1); }  //Up
+        else if(keycode(e, 39)) { arrowNameSel(e, 1); }   //Right
+        else if(keycode(e, 40)) { arrowNameSel(e, 1); }   //Down
+    }
+
+
+    function init () {
+        jtminjsDecorateWithUtilities(jt);
+        initData(mavissen.concat(mavisrep));
+        initDims();
+        initMap();
+        initZoomedArea();
+        initNamesArea();
+        initProfileDisplayArea();
+        jt.on(document, "keydown", globkey);
     }
 
 
