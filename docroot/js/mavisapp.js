@@ -14,7 +14,7 @@ mavisapp = (function () {
                   republican:{map:"#ff3333", txt:"#f4d0d0"}, 
                   democrat:{  map:"#3333ff", txt:"#dbdbff"}},
         dims = null,
-        stat = {zoomed:false, nuto:null};
+        stat = {zoomed:false, nuto:null, zwclickid:null};
     
 
     function pathToPoints (path) {
@@ -88,12 +88,32 @@ mavisapp = (function () {
 
 
     function onlineContactLinks (dp) {
-        var html = [];
+        var html = [], sms = {facebook:"socbwf.png",
+                              twitter:"socbwt.png",
+                              instagram:"socbwi.png"};
         if(dp.email) {
             html.push(["a", {href:"mailto:" + dp.email},
-                       ["img", {src:"img/emailbw22.png"}]]); }
+                       ["img", {src:"img/email.png", cla:"socmedi"}]]); }
+        Object.keys(sms).forEach(function (key) {
+            if(dp[key]) {
+                html.push(["a", {href:dp[key], onclick:jt.fs("window.open('" + 
+                                                             dp[key] + "')")},
+                           ["img", {src:"img/" + sms[key], 
+                                    cla:"socmedi"}]]); } });
         html = jt.tac2html(html);
         return html;
+    }
+
+
+    function titleCommittee (dp) {
+        var txt = dp.positionTitle || "";
+        if(dp.committeeName) {
+            if(txt) {
+                txt += " "; }
+            if(dp.committeeType) {
+                txt += dp.committeeType + " "; }
+            txt += dp.committeeName; }
+        return txt;
     }
 
 
@@ -172,8 +192,8 @@ mavisapp = (function () {
         //https://www.codeproject.com/tips/84226/is-a-point-inside-a-polygon
         dp.ppts.forEach(function (pt) {
             var m, b, x;
-            if((prevp.y > point.y) !== (pt.y > point.y)) { //have y cross
-                //derive line equation (y = mx + b) and verify the ray
+            if((prevp.y > point.y) !== (pt.y > point.y)) { //have y cross.
+                //Derive line equation (y = mx + b) and verify the ray
                 //intersects it to the right by plugging in point.y and
                 //comparing the result to point.x.
                 m = (pt.y - prevp.y) / (pt.x - prevp.x);
@@ -247,7 +267,7 @@ mavisapp = (function () {
         dims.zrw = dims.nmw;
         dims.zrh = dims.mab;
         //zoomed svg display (scrolling magnified svg)
-        dims.zf = 8;  //zoom factor
+        dims.zf = 5;  //higher zoom does not increase point math accuracy
         dims.zsw = Math.round(dims.svbw * dims.zf);
         dims.zsh = Math.round(dims.svbh * dims.zf);
         //zoom indicator rect (green box)
@@ -256,9 +276,9 @@ mavisapp = (function () {
         dims.ziw50 = Math.round(0.5 * dims.ziw);
         dims.zih50 = Math.round(0.5 * dims.zih);
         dims.zib = 2;  //border width for indicator rect
-        //profile display
-        dims.pdw = Math.round(0.95 * dims.svgw);
-        dims.pdh = Math.round(1.2 * dims.svgh);
+        //profile display.  Look good on a phone, don't overtake big screen.
+        dims.pdw = 310;
+        dims.pdh = 240;
     }
 
 
@@ -355,7 +375,13 @@ mavisapp = (function () {
         // circ.setAttribute("r", 2);
         // circ.setAttribute("style", "stroke:#000;fill:#000;");
         // jt.byId("zmavissvg").appendChild(circ);
-        jt.out("mavisnamesdiv", namesFromDat({x:clickpt.x, y:clickpt.y}));
+        if(colors.currid && colors.currid === stat.zwclickid) {
+            //same area clicked again, toggle filtering off and rebuild names
+            stat.zwclickid = null;
+            updateNamesList(); }
+        else {
+            stat.zwclickid = colors.currid;
+            jt.out("mavisnamesdiv", namesFromDat(clickpt)); }
     }
 
 
@@ -423,26 +449,28 @@ mavisapp = (function () {
 
 
     //The legislator url does not permit cross-origin framing, so any data
-    //from there needs to be extracted first.
+    //from there needs to be extracted and shown locally.
     function namesel (dpid) {
         var html, dp = dpdict[dpid];
-        html = ["div", {id:"profdispdiv"},
-                [["div", {id:"profclosexdiv"},
-                  ["a", {href:"#close", onclick:jt.fs("mavisapp.closeprof()")},
-                   "x"]],
-                 ["div", {id:"profnamediv"},
-                  ["a", {href:dp.url, 
-                         onclick:jt.fs("window.open('" + dp.url + "')")},
-                   dp.name.slice(0, -4)]],
-                 ["div", {id:"profbodydiv"},
-                  [["div", {id:"profpicdiv"},
-                    ["img", {src:"img/profpic/" + dp.capic}]],
-                   ["div", {id:"profteamdiv"}, teamName(dp)],
-                   ["div", {id:"profposdiv"}, legisType(dp)],
-                   ["div", {id:"profdistdiv"}, dp.district || ""],
-                   ["div", {id:"profphonediv"}, phoneLink(dp)],
-                   ["div", {id:"profroomdiv"}, "Room " +(dp.room || "Unknown")],
-                   ["div", {id:"profolcont"}, onlineContactLinks(dp)]]]]];
+        html = 
+            ["div", {id:"profdispdiv"},
+             [["div", {id:"profclosexdiv"},
+               ["a", {href:"#close", onclick:jt.fs("mavisapp.closeprof()")},
+                "x"]],
+              ["div", {id:"profnamediv"},
+               ["a", {href:dp.url, 
+                      onclick:jt.fs("window.open('" + dp.url + "')")},
+                dp.name.slice(0, -4)]],
+              ["div", {id:"profbodydiv"},
+               [["div", {id:"profpicdiv"},
+                 ["img", {src:"img/profpic/" + dp.capic}]],
+                ["div", {id:"profteamdiv"}, teamName(dp)],
+                ["div", {id:"profposdiv"}, legisType(dp)],
+                ["div", {id:"profdistdiv"}, dp.district || ""],
+                ["div", {id:"profphonediv"}, phoneLink(dp)],
+                ["div", {id:"profroomdiv"}, "Room " + (dp.room || "Unknown")],
+                ["div", {id:"profolcont"}, onlineContactLinks(dp)],
+                ["div", {id:"proftitlediv"}, titleCommittee(dp)]]]]];
         jt.out("mavisdetdiv", jt.tac2html(html));
         jt.byId("mavisdetdiv").style.display = "block";
     }

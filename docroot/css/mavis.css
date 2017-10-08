@@ -34,5 +34,6 @@ A:hover {text-decoration:underline; color:#a05705; }
 #profteamdiv { font-size:small; }
 #profdistdiv { font-size:x-small; }
 #profphonediv { font-size:small; }
-#profroomdiv { font-size:small; }
+#profroomdiv, #proftitlediv { font-size:small; }
+.socmedi { max-height:22px; padding:0px 10px 0px 0px; }
 
