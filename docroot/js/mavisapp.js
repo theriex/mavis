@@ -156,8 +156,25 @@ mavisapp = (function () {
     }
 
 
+    function logAndDrawRect (label, color, coords) {
+        var rect = document.createElementNS("http://www.w3.org/2000/svg", 
+                                            "rect");
+        rect.setAttribute("x", coords.x1);
+        rect.setAttribute("y", coords.y1);
+        rect.setAttribute("width", coords.x2 - coords.x1);
+        rect.setAttribute("height", coords.y2 - coords.y1);
+        rect.setAttribute("style", "stroke:" + color + ";fill:" + color + ";");
+        jt.byId("mavissvg").appendChild(rect);
+        jt.log(label + " x1:" + coords.x1 + " y1:" + coords.y1 +
+               " x2:" + coords.x2 + " y2:" + coords.y2);
+    }
+
+
     function pathInRect (dp, filt) {
-        var inter, pad = 2;
+        var inter, pad;  
+        //padding of 2 ok for phone scale, 18 ok for larger. Compromise.
+        pad = Math.round(0.1 * (filt.maxx - filt.minx));
+        //jt.log("pad: " + pad + ", filt.w: " + (filt.maxx - filt.minx));
         //pad the filter all around to avoid including things where only the
         //edge is barely touching
         filt = {minx:filt.minx + pad,
@@ -172,6 +189,17 @@ mavisapp = (function () {
                             y:Math.min(dp.boundr.maxy, filt.maxy)}};
         if(inter.maxofmin.x < inter.minofmax.x && 
            inter.maxofmin.y < inter.minofmax.y) {
+            // if(!stat.debugsnapshot) {
+            //     stat.debugsnapshot = true;
+            //     logAndDrawRect("dp.boundr", "yellow", 
+            //                    {x1:dp.boundr.minx, y1:dp.boundr.miny,
+            //                     x2:dp.boundr.maxx, y2:dp.boundr.maxy});
+            //     logAndDrawRect("   filter", "blue", 
+            //                    {x1:filt.minx, y1:filt.miny,
+            //                     x2:filt.maxx, y2:filt.maxy});
+            //     logAndDrawRect("    inter", "red", 
+            //                    {x1:inter.maxofmin.x, y1:inter.maxofmin.y,
+            //                     x2:inter.minofmax.x, y2:inter.minofmax.y}); }
             return true; }
         return false;
     }
@@ -206,12 +234,18 @@ mavisapp = (function () {
 
 
     function pointMatchesText (dp, txt) {
-        var lt = txt.toLowerCase();
+        var lt = txt.toLowerCase().trim();
+        if(!lt) {
+            return true; }
         if(dp.name.toLowerCase().indexOf(lt) >= 0) {
             return true; }
         if(teamName(dp).toLowerCase().indexOf(lt) >= 0) {
             return true; }
         if("progressive".indexOf(lt) >= 0 && dp.progcauc) {
+            return true; }
+        if(titleCommittee(dp).toLowerCase().indexOf(lt) >= 0) {
+            return true; }
+        if(dp.district && dp.district.toLowerCase().indexOf(lt) >= 0) {
             return true; }
         return false;
     }
@@ -224,7 +258,7 @@ mavisapp = (function () {
             return pathInRect(dp, filt); }
         if(filt.x) {
             return pointWithinPath(dp, filt); }
-        if(filt.txt) {
+        if(filt.textfilter) {
             return pointMatchesText(dp, filt.txt); }
         return false;
     }
@@ -521,7 +555,7 @@ mavisapp = (function () {
             return; }
         stat.fito = setTimeout(function () {
             var val = jt.byId("txtfiltin").value;
-            jt.out("mavisnamesdiv", namesFromDat({txt:val}));
+            jt.out("mavisnamesdiv", namesFromDat({textfilter:true, txt:val}));
             stat.fito = null; }, 100);
     }
 
